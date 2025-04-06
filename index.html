@@ -1,0 +1,568 @@
+# Modern KDJ Salon Redesign
+
+Here's a complete redesign of your salon website with modern UI/UX principles, incorporating Three.js for 3D elements, p5.js for interactive animations, and enhanced features:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDJ Salon | Premium Beauty Experience</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            salon: {
+              primary: '#FF4D8D',
+              secondary: '#FF85A2',
+              light: '#FFF0F5',
+              dark: '#D23369',
+              accent: '#FFB6C1',
+            },
+          },
+          fontFamily: {
+            sans: ['"Montserrat"', 'sans-serif'],
+            display: ['"Playfair Display"', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+    
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    .hero-gradient {
+      background: linear-gradient(135deg, rgba(255,77,141,0.1) 0%, rgba(255,255,255,0.8) 100%);
+    }
+    
+    .service-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .nav-link {
+      position: relative;
+    }
+    
+    .nav-link:after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: -2px;
+      left: 0;
+      background-color: #FF4D8D;
+      transition: width 0.3s ease;
+    }
+    
+    .nav-link:hover:after {
+      width: 100%;
+    }
+    
+    #threejs-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.1;
+    }
+    
+    .floating {
+      animation: floating 6s ease-in-out infinite;
+    }
+    
+    @keyframes floating {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-15px); }
+      100% { transform: translateY(0px); }
+    }
+    
+    .staggered-animation {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.6s forwards;
+    }
+    
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body class="font-sans bg-salon-light text-gray-800 antialiased">
+
+  <!-- Three.js Background -->
+  <div id="threejs-bg"></div>
+
+  <!-- Floating particles canvas -->
+  <div id="particles-js" class="fixed top-0 left-0 w-full h-full z-0 pointer-events-none"></div>
+
+  <!-- Navigation -->
+  <header class="fixed w-full z-50 bg-white bg-opacity-90 backdrop-filter backdrop-blur-sm shadow-sm">
+    <div class="container mx-auto px-6 py-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center">
+          <a href="#" class="text-2xl font-bold text-salon-primary flex items-center">
+            <span class="mr-2">KDJ</span>
+            <lottie-player src="https://assets6.lottiefiles.com/packages/lf20_1a8dx7zj.json" background="transparent" speed="1" style="width: 40px; height: 40px;" loop autoplay></lottie-player>
+          </a>
+        </div>
+        
+        <nav class="hidden md:flex space-x-8">
+          <a href="#home" class="nav-link text-gray-700 hover:text-salon-primary font-medium transition">Home</a>
+          <a href="#about" class="nav-link text-gray-700 hover:text-salon-primary font-medium transition">About</a>
+          <a href="#services" class="nav-link text-gray-700 hover:text-salon-primary font-medium transition">Services</a>
+          <a href="#team" class="nav-link text-gray-700 hover:text-salon-primary font-medium transition">Stylists</a>
+          <a href="#testimonials" class="nav-link text-gray-700 hover:text-salon-primary font-medium transition">Reviews</a>
+          <a href="#contact" class="nav-link text-gray-700 hover:text-salon-primary font-medium transition">Contact</a>
+        </nav>
+        
+        <button onclick="toggleBookingModal()" class="bg-salon-primary text-white px-4 py-2 rounded-full hover:bg-salon-dark transition flex items-center">
+          <i class="fas fa-calendar-alt mr-2"></i> Book Now
+        </button>
+        
+        <button id="mobile-menu-button" class="md:hidden text-gray-700 focus:outline-none">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white py-4 px-6 shadow-lg">
+      <div class="flex flex-col space-y-4">
+        <a href="#home" class="text-gray-700 hover:text-salon-primary font-medium">Home</a>
+        <a href="#about" class="text-gray-700 hover:text-salon-primary font-medium">About</a>
+        <a href="#services" class="text-gray-700 hover:text-salon-primary font-medium">Services</a>
+        <a href="#team" class="text-gray-700 hover:text-salon-primary font-medium">Stylists</a>
+        <a href="#testimonials" class="text-gray-700 hover:text-salon-primary font-medium">Reviews</a>
+        <a href="#contact" class="text-gray-700 hover:text-salon-primary font-medium">Contact</a>
+        <button onclick="toggleBookingModal()" class="bg-salon-primary text-white px-4 py-2 rounded-full hover:bg-salon-dark transition w-full mt-2">
+          Book Now
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="home" class="pt-32 pb-20 px-6 hero-gradient relative overflow-hidden">
+    <div class="container mx-auto flex flex-col md:flex-row items-center">
+      <div class="md:w-1/2 mb-12 md:mb-0 staggered-animation" style="animation-delay: 0.1s;">
+        <h1 class="text-4xl md:text-6xl font-display font-bold text-gray-800 mb-6 leading-tight">
+          Elevate Your <span class="text-salon-primary">Beauty</span> Experience
+        </h1>
+        <p class="text-lg text-gray-600 mb-8 max-w-lg">
+          Discover luxury beauty treatments tailored to enhance your natural radiance. Our expert stylists create personalized experiences that leave you feeling confident and rejuvenated.
+        </p>
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+          <button onclick="toggleBookingModal()" class="bg-salon-primary text-white px-8 py-3 rounded-full hover:bg-salon-dark transition flex items-center justify-center">
+            <i class="fas fa-calendar-alt mr-2"></i> Book Appointment
+          </button>
+          <a href="#services" class="border-2 border-salon-primary text-salon-primary px-8 py-3 rounded-full hover:bg-salon-primary hover:text-white transition flex items-center justify-center">
+            <i class="fas fa-spa mr-2"></i> Explore Services
+          </a>
+        </div>
+        
+        <div class="mt-12 flex items-center space-x-6">
+          <div class="flex -space-x-2">
+            <div class="w-10 h-10 rounded-full bg-salon-secondary border-2 border-white"></div>
+            <div class="w-10 h-10 rounded-full bg-salon-accent border-2 border-white"></div>
+            <div class="w-10 h-10 rounded-full bg-salon-dark border-2 border-white"></div>
+          </div>
+          <div>
+            <div class="flex items-center">
+              <div class="flex">
+                <i class="fas fa-star text-yellow-400"></i>
+                <i class="fas fa-star text-yellow-400"></i>
+                <i class="fas fa-star text-yellow-400"></i>
+                <i class="fas fa-star text-yellow-400"></i>
+                <i class="fas fa-star text-yellow-400"></i>
+              </div>
+              <span class="ml-2 text-gray-600">200+ Reviews</span>
+            </div>
+            <p class="text-sm text-gray-500">Trusted by clients in Ganemulla</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="md:w-1/2 flex justify-center staggered-animation" style="animation-delay: 0.3s;">
+        <div class="relative floating">
+          <div class="w-64 h-64 md:w-80 md:h-80 bg-salon-primary rounded-full opacity-20 absolute -top-10 -left-10"></div>
+          <div class="w-64 h-64 md:w-80 md:h-80 bg-salon-accent rounded-full opacity-20 absolute -bottom-10 -right-10"></div>
+          <div class="relative bg-white p-8 rounded-2xl shadow-xl w-64 h-64 md:w-80 md:h-80 flex flex-col justify-center items-center">
+            <lottie-player src="https://assets6.lottiefiles.com/packages/lf20_1a8dx7zj.json" background="transparent" speed="1" style="width: 150px; height: 150px;" loop autoplay></lottie-player>
+            <h3 class="text-xl font-bold text-salon-primary mt-4">Your Beauty Journey Starts Here</h3>
+            <p class="text-center text-sm text-gray-600 mt-2">Book your consultation today</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="absolute bottom-0 left-0 w-full overflow-hidden">
+      <svg viewBox="0 0 1200 120" preserveAspectRatio="none" class="fill-current text-white w-full h-16">
+        <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25"></path>
+        <path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5"></path>
+        <path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z"></path>
+      </svg>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="py-20 px-6 bg-white">
+    <div class="container mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-4">Our Story</h2>
+        <div class="w-20 h-1 bg-salon-primary mx-auto"></div>
+      </div>
+      
+      <div class="flex flex-col md:flex-row items-center">
+        <div class="md:w-1/2 mb-12 md:mb-0 pr-0 md:pr-10 staggered-animation" style="animation-delay: 0.2s;">
+          <div class="bg-salon-light p-8 rounded-2xl shadow-sm">
+            <h3 class="text-2xl font-display font-semibold text-salon-primary mb-4">Redefining Beauty Standards</h3>
+            <p class="text-gray-600 mb-6">
+              Founded in 2015, KDJ Salon has grown from a small neighborhood beauty spot to Ganemulla's premier luxury salon. Our journey has been guided by a passion for craftsmanship and a commitment to personalized care.
+            </p>
+            <p class="text-gray-600 mb-6">
+              We believe beauty is about enhancing your unique features, not conforming to trends. Our team of internationally trained stylists brings diverse expertise to create looks that reflect your personality and lifestyle.
+            </p>
+            <div class="flex flex-wrap gap-4">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-salon-primary flex items-center justify-center text-white mr-3">
+                  <i class="fas fa-award"></i>
+                </div>
+                <span class="font-medium">Award Winning</span>
+              </div>
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-salon-primary flex items-center justify-center text-white mr-3">
+                  <i class="fas fa-leaf"></i>
+                </div>
+                <span class="font-medium">Eco-Friendly</span>
+              </div>
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-salon-primary flex items-center justify-center text-white mr-3">
+                  <i class="fas fa-heart"></i>
+                </div>
+                <span class="font-medium">Premium Products</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="md:w-1/2 pl-0 md:pl-10 staggered-animation" style="animation-delay: 0.4s;">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-salon-secondary bg-opacity-20 p-6 rounded-xl flex flex-col items-center justify-center h-40">
+              <div class="text-4xl font-bold text-salon-primary mb-2">8+</div>
+              <div class="text-center">Years Experience</div>
+            </div>
+            <div class="bg-salon-accent bg-opacity-20 p-6 rounded-xl flex flex-col items-center justify-center h-40">
+              <div class="text-4xl font-bold text-salon-primary mb-2">15+</div>
+              <div class="text-center">Professional Stylists</div>
+            </div>
+            <div class="bg-salon-dark bg-opacity-20 p-6 rounded-xl flex flex-col items-center justify-center h-40">
+              <div class="text-4xl font-bold text-salon-primary mb-2">5K+</div>
+              <div class="text-center">Happy Clients</div>
+            </div>
+            <div class="bg-salon-primary bg-opacity-20 p-6 rounded-xl flex flex-col items-center justify-center h-40">
+              <div class="text-4xl font-bold text-salon-primary mb-2">50+</div>
+              <div class="text-center">Services Offered</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section id="services" class="py-20 px-6 bg-salon-light">
+    <div class="container mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-4">Our Services</h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">Premium beauty treatments designed to bring out your best features</p>
+        <div class="w-20 h-1 bg-salon-primary mx-auto mt-4"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Hair Services -->
+        <div class="service-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.1s;">
+          <div class="p-6">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-full bg-salon-primary bg-opacity-10 flex items-center justify-center text-salon-primary mr-4">
+                <i class="fas fa-cut text-xl"></i>
+              </div>
+              <h3 class="text-xl font-bold">Hair Services</h3>
+            </div>
+            <ul class="space-y-3 mb-6">
+              <li class="flex justify-between">
+                <span>Women's Haircut</span>
+                <span class="font-medium">Rs. 1200+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Men's Haircut</span>
+                <span class="font-medium">Rs. 800+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Blowout & Styling</span>
+                <span class="font-medium">Rs. 1500+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Hair Coloring</span>
+                <span class="font-medium">Rs. 2500+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Keratin Treatment</span>
+                <span class="font-medium">Rs. 5000+</span>
+              </li>
+            </ul>
+            <button onclick="toggleBookingModal('Hair Services')" class="w-full bg-salon-primary text-white py-2 rounded-lg hover:bg-salon-dark transition flex items-center justify-center">
+              <i class="fas fa-scissors mr-2"></i> Book Hair Service
+            </button>
+          </div>
+        </div>
+        
+        <!-- Skin Care -->
+        <div class="service-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.3s;">
+          <div class="p-6">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-full bg-salon-primary bg-opacity-10 flex items-center justify-center text-salon-primary mr-4">
+                <i class="fas fa-spa text-xl"></i>
+              </div>
+              <h3 class="text-xl font-bold">Skin Care</h3>
+            </div>
+            <ul class="space-y-3 mb-6">
+              <li class="flex justify-between">
+                <span>Signature Facial</span>
+                <span class="font-medium">Rs. 1800+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Anti-Aging Treatment</span>
+                <span class="font-medium">Rs. 2500+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Acne Clear Facial</span>
+                <span class="font-medium">Rs. 2200+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Gold Facial</span>
+                <span class="font-medium">Rs. 3000+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Microdermabrasion</span>
+                <span class="font-medium">Rs. 3500+</span>
+              </li>
+            </ul>
+            <button onclick="toggleBookingModal('Skin Care')" class="w-full bg-salon-primary text-white py-2 rounded-lg hover:bg-salon-dark transition flex items-center justify-center">
+              <i class="fas fa-spa mr-2"></i> Book Skin Treatment
+            </button>
+          </div>
+        </div>
+        
+        <!-- Bridal & Special -->
+        <div class="service-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.5s;">
+          <div class="p-6">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-full bg-salon-primary bg-opacity-10 flex items-center justify-center text-salon-primary mr-4">
+                <i class="fas fa-heart text-xl"></i>
+              </div>
+              <h3 class="text-xl font-bold">Bridal & Special</h3>
+            </div>
+            <ul class="space-y-3 mb-6">
+              <li class="flex justify-between">
+                <span>Bridal Makeup Trial</span>
+                <span class="font-medium">Rs. 4000+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Wedding Day Package</span>
+                <span class="font-medium">Rs. 15,000+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Engagement Styling</span>
+                <span class="font-medium">Rs. 6000+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Party Makeup</span>
+                <span class="font-medium">Rs. 3500+</span>
+              </li>
+              <li class="flex justify-between">
+                <span>Photoshoot Styling</span>
+                <span class="font-medium">Rs. 5000+</span>
+              </li>
+            </ul>
+            <button onclick="toggleBookingModal('Bridal Services')" class="w-full bg-salon-primary text-white py-2 rounded-lg hover:bg-salon-dark transition flex items-center justify-center">
+              <i class="fas fa-heart mr-2"></i> Book Special Occasion
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-center mt-12">
+        <button onclick="toggleServicesModal()" class="bg-white text-salon-primary border border-salon-primary px-6 py-3 rounded-full hover:bg-salon-primary hover:text-white transition">
+          View All Services & Pricing
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team Section -->
+  <section id="team" class="py-20 px-6 bg-white">
+    <div class="container mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-4">Meet Our Stylists</h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">Our talented team of beauty professionals</p>
+        <div class="w-20 h-1 bg-salon-primary mx-auto mt-4"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- Stylist 1 -->
+        <div class="bg-salon-light rounded-xl overflow-hidden shadow-md transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.1s;">
+          <div class="h-64 bg-salon-accent bg-opacity-20 flex items-center justify-center">
+            <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_5tkzkblw.json" background="transparent" speed="1" style="width: 200px; height: 200px;" loop autoplay></lottie-player>
+          </div>
+          <div class="p-6 text-center">
+            <h3 class="text-xl font-bold mb-1">Nadeesha Perera</h3>
+            <p class="text-salon-primary mb-3">Master Stylist</p>
+            <p class="text-gray-600 text-sm mb-4">Specializes in precision cuts and color correction with 10 years of experience.</p>
+            <div class="flex justify-center space-x-2">
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Hair</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Color</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Extensions</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stylist 2 -->
+        <div class="bg-salon-light rounded-xl overflow-hidden shadow-md transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.3s;">
+          <div class="h-64 bg-salon-accent bg-opacity-20 flex items-center justify-center">
+            <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_5tkzkblw.json" background="transparent" speed="1" style="width: 200px; height: 200px;" loop autoplay></lottie-player>
+          </div>
+          <div class="p-6 text-center">
+            <h3 class="text-xl font-bold mb-1">Ishara Silva</h3>
+            <p class="text-salon-primary mb-3">Skin Specialist</p>
+            <p class="text-gray-600 text-sm mb-4">Certified aesthetician with expertise in advanced facial treatments.</p>
+            <div class="flex justify-center space-x-2">
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Facials</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Peels</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Microderm</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stylist 3 -->
+        <div class="bg-salon-light rounded-xl overflow-hidden shadow-md transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.5s;">
+          <div class="h-64 bg-salon-accent bg-opacity-20 flex items-center justify-center">
+            <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_5tkzkblw.json" background="transparent" speed="1" style="width: 200px; height: 200px;" loop autoplay></lottie-player>
+          </div>
+          <div class="p-6 text-center">
+            <h3 class="text-xl font-bold mb-1">Tharindu Fernando</h3>
+            <p class="text-salon-primary mb-3">Barber & Grooming</p>
+            <p class="text-gray-600 text-sm mb-4">Specializes in modern men's cuts and traditional straight razor shaves.</p>
+            <div class="flex justify-center space-x-2">
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Beards</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Fades</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Shaves</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stylist 4 -->
+        <div class="bg-salon-light rounded-xl overflow-hidden shadow-md transition duration-300 transform hover:scale-105 staggered-animation" style="animation-delay: 0.7s;">
+          <div class="h-64 bg-salon-accent bg-opacity-20 flex items-center justify-center">
+            <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_5tkzkblw.json" background="transparent" speed="1" style="width: 200px; height: 200px;" loop autoplay></lottie-player>
+          </div>
+          <div class="p-6 text-center">
+            <h3 class="text-xl font-bold mb-1">Kavindi Rajapakse</h3>
+            <p class="text-salon-primary mb-3">Bridal Specialist</p>
+            <p class="text-gray-600 text-sm mb-4">Creates stunning bridal looks that enhance natural beauty.</p>
+            <div class="flex justify-center space-x-2">
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Makeup</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Bridal</span>
+              <span class="bg-salon-primary bg-opacity-10 text-salon-primary text-xs px-3 py-1 rounded-full">Events</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-center mt-12">
+        <button onclick="toggleTeamModal()" class="bg-salon-primary text-white px-6 py-3 rounded-full hover:bg-salon-dark transition">
+          Meet The Full Team
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section id="testimonials" class="py-20 px-6 bg-salon-light">
+    <div class="container mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display font-bold text-gray-800 mb-4">Client Experiences</h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">What our clients say about their KDJ Salon experience</p>
+        <div class="w-20 h-1 bg-salon-primary mx-auto mt-4"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Testimonial 1 -->
+        <div class="bg-white p-8 rounded-xl shadow-md staggered-animation" style="animation-delay: 0.1s;">
+          <div class="flex items-center mb-4">
+            <div class="flex items-center">
+              <div class="w-12 h-12 rounded-full bg-salon-accent bg-opacity-20 flex items-center justify-center text-salon-primary mr-4">
+                <i class="fas fa-user text-xl"></i>
+              </div>
+              <div>
+                <h4 class="font-bold">Sanduni R.</h4>
+                <div class="flex">
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="text-gray-600 italic mb-4">
+            "KDJ Salon transformed my damaged hair into silky smooth locks. The keratin treatment was worth every rupee! The staff made me feel like royalty."
+          </p>
+          <div class="text-right">
+            <span class="text-xs text-gray-400">2 weeks ago</span>
+          </div>
+        </div>
+        
+        <!-- Testimonial 2 -->
+        <div class="bg-white p-8 rounded-xl shadow-md staggered-animation" style="animation-delay: 0.3s;">
+          <div class="flex items-center mb-4">
+            <div class="flex items-center">
+              <div class="w-12 h-12 rounded-full bg-salon-accent bg-opacity-20 flex items-center justify-center text-salon-primary mr-4">
+                <i class="fas fa-user text-xl"></i>
+              </div>
+              <div>
+                <h4 class="font-bold">Dilshan M.</h4>
+                <div class="flex">
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="text-gray-600 italic mb-4">
+            "Best men's haircut I've ever had in Sri Lanka. Tharindu took the time to understand exactly what I wanted and delivered perfection. Will be my regular spot."
+          </p>
+          <div class="text-right">
+            <span class="text-xs text
